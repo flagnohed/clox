@@ -94,7 +94,7 @@ static void emit_byte (uint8_t byte) {
     write_chunk (current_chunk (), byte, parser.prev.line);
 }
 
-static void emite_bytes (uint8_t byte1, uint8_t byte2) {
+static void emit_bytes (uint8_t byte1, uint8_t byte2) {
     write_chunk (current_chunk (), byte1, parser.prev.line);
     write_chunk (current_chunk (), byte2, parser.prev.line);
 }
@@ -111,6 +111,10 @@ static uint8_t make_constant (Value val) {
     }
 
     return (uint8_t) constant;
+}
+
+static void emit_constant (Value val) {
+    emit_bytes (OP_CONSTANT, make_constant (val));
 }
 
 static void end_compiler () {
@@ -135,7 +139,7 @@ static void binary () {
         case TOKEN_PLUS: emit_byte (OP_ADD); break;
         case TOKEN_MINUS: emit_byte (OP_SUBTRACT); break;
         case TOKEN_STAR: emit_byte (OP_MULTIPLY); break;
-        case TOKEN_SLASH: emot_byte (OP_DIVIDE); break;
+        case TOKEN_SLASH: emit_byte (OP_DIVIDE); break;
         default: return;  /* Unreachable. */
     }
 }
@@ -146,7 +150,7 @@ static void grouping () {
 }
 
 static void number () {
-    double val = strod (parser.prev.start, NULL);
+    double val = strtod (parser.prev.start, NULL);
     emit_constant (val);
 }
 
@@ -230,8 +234,11 @@ static void expression () {
 
 bool compile (const char* source, Chunk *c) {
     init_scanner (source);
+
+    compiling_chunk = c;
     parser.had_error = false;
     parser.panic_mode = false;
+
     advance ();
     expression ();
     consume (TOKEN_EOF, "Expect end of expression.");

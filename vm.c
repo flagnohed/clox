@@ -20,7 +20,6 @@ void free_VM() {
 }
 
 static InterpretRes run () {
-
 #define READ_BYTE() (*vm.ip++)
 #define READ_CONSTANT() (vm.c->constants.values[READ_BYTE()])
 
@@ -91,12 +90,12 @@ Value pop () {
 InterpretRes interpret (const char *source) {
     Chunk c;
     init_chunk (&c);
-    
+    printf("here?\n");
     if (!compile (source, &c)) {
         free_chunk (&c);
         return INTERPRET_COMPILE_ERROR;
     }
-
+    
     vm.c = &c;
     vm.ip = vm.c->code;
 
