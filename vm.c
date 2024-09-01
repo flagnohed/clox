@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #include "common.h"
+#include "compiler.h"
 #include "debug.h"
 #include "value.h"
 #include "vm.h"
@@ -87,9 +88,8 @@ Value pop () {
 }
 
 
-InterpretRes interpret (Chunk *c) {
-    vm.c = c;
-    vm.ip = vm.c->code;
-    return run (); 
+InterpretRes interpret (const char *source) {
+    compile (source);
+    return INTERPRET_OK;
 }
 
