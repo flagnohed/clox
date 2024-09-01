@@ -89,7 +89,20 @@ Value pop () {
 
 
 InterpretRes interpret (const char *source) {
-    compile (source);
-    return INTERPRET_OK;
+    Chunk c;
+    init_chunk (&c);
+    
+    if (!compile (source, &c)) {
+        free_chunk (&c);
+        return INTERPRET_COMPILE_ERROR;
+    }
+
+    vm.c = &c;
+    vm.ip = vm.c->code;
+
+    InterpretRes res = run ();
+
+    free_chunk (&c);
+    return res;
 }
 
