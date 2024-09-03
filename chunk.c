@@ -21,7 +21,7 @@ void free_chunk (Chunk *c) {
 }
 
 void write_chunk (Chunk *c, uint8_t byte, int line) {
-    if (c->count == c->capacity) {
+    if (c->capacity < c->count + 1) {
         int old_capacity = c->capacity;
         c->capacity = GROW_CAPACITY(old_capacity);
         c->code = GROW_ARRAY(uint8_t, c->code, 

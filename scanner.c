@@ -146,7 +146,7 @@ static Token_t identifier_type () {
 
 static Token identifier () {
     while (isalpha (peek ()) || isdigit (peek ())) advance ();
-    return make_token (TOKEN_IDENTIFIER);
+    return make_token (identifier_type ());
 }
 
 static Token number () {
