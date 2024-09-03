@@ -47,6 +47,10 @@ static Value peek (int distance) {
     return vm.sp[-1 - distance];
 }
 
+static bool is_falsey (Value val) {
+    return IS_NIL(val) || (IS_BOOL(val) && !AS_BOOL(val));
+}
+
 static InterpretRes run () {
 #define READ_BYTE() (*vm.ip++)
 #define READ_CONSTANT() (vm.c->constants.values[READ_BYTE()])
@@ -61,9 +65,6 @@ static InterpretRes run () {
       double a = AS_NUMBER(pop());                        \
       push(value_type(a op b));                           \
     } while (false)
-
-    
-    // Value constant;
 
     for (;;) {
 #ifdef DEBUG_TRACE_EXEC
@@ -106,6 +107,9 @@ static InterpretRes run () {
             case OP_DIVIDE:
                 BINARY_OP(NUMBER_VAL, /);
                 break;
+            case OP_NOT:
+                push (BOOL_VAL(is_falsey (pop ())));
+                break;
             case OP_RETURN:
                 print_value (pop ());
                 printf ("\n");
@@ -116,7 +120,6 @@ static InterpretRes run () {
 #undef READ_CONSTANT
 #undef BINARY_OP
 }
-
 
 
 InterpretRes interpret (const char *source) {
