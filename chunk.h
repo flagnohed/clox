@@ -20,7 +20,6 @@ typedef enum {
     OP_DIVIDE,
     OP_NOT,
     OP_RETURN,
-    
 }   OpCode;
 
 typedef struct {

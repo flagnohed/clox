@@ -1,9 +1,12 @@
 #include <stdarg.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "common.h"
 #include "compiler.h"
 #include "debug.h"
+#include "memory.h"
+#include "object.h"
 #include "value.h"
 #include "vm.h"
 
@@ -28,9 +31,11 @@ static void runtime_error (const char *format, ...) {
 
 void init_VM() {
     reset_stack ();
+    vm.objects = NULL;
 }
 
 void free_VM() {
+    free_objects ();
 }
 
 void push (Value val) {
@@ -49,6 +54,21 @@ static Value peek (int distance) {
 
 static bool is_falsey (Value val) {
     return IS_NIL(val) || (IS_BOOL(val) && !AS_BOOL(val));
+}
+
+static void concatenate () {
+    ObjString *b = AS_STRING(pop ());
+    ObjString *a = AS_STRING(pop ());
+
+    int len = a->len + b->len;
+    char *chars = ALLOCATE(char, len + 1);
+    memcpy (chars, a->chars, a->len);
+    memcpy (chars + a->len, b->chars, b->len);
+    chars[len] = '\0';
+
+    ObjString *res = take_string (chars, len);
+    push (OBJ_VAL(res));
+
 }
 
 static InterpretRes run () {
@@ -102,7 +122,20 @@ static InterpretRes run () {
                 }
                 push (NUMBER_VAL(-AS_NUMBER(pop())));
                 break;
-            case OP_ADD:      BINARY_OP(NUMBER_VAL, +); break;
+            case OP_ADD: {
+                if (IS_STRING(peek(0)) && IS_STRING(peek(1))) {
+                    concatenate ();
+                } else if (IS_NUMBER(peek(0)) && IS_NUMBER(peek(1))) {
+                    double b = AS_NUMBER(pop ());
+                    double a = AS_NUMBER(pop ());
+                    push (NUMBER_VAL (a + b));
+                } else {
+                    runtime_error (
+                        "Operands must be two numbers or two strings.");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                break;
+            }      
             case OP_SUBTRACT: BINARY_OP(NUMBER_VAL, -); break;
             case OP_MULTIPLY: BINARY_OP(NUMBER_VAL, *); break;
             case OP_DIVIDE:   BINARY_OP(NUMBER_VAL, /); break;

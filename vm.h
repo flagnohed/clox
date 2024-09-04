@@ -10,9 +10,10 @@
 
 typedef struct {
     Chunk* c;
-    uint8_t *ip;            // instruction pointer
+    uint8_t *ip;            /* Instruction pointer. */
     Value stack[STACK_MAX];
-    Value *sp;              // points to the top of stack
+    Value *sp;              /* Points to the top of stack. */
+    Obj *objects;           /* Used in garbage collection. */
 }   VM;
 
 typedef enum {
@@ -20,6 +21,8 @@ typedef enum {
     INTERPRET_COMPILE_ERROR,
     INTERPRET_RUNTIME_ERROR,
 }   InterpretRes;
+
+extern VM vm;
 
 void init_VM();
 void free_VM();

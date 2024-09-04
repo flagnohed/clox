@@ -41,37 +41,38 @@ typedef struct {
 Parser parser;
 Chunk *compiling_chunk;
 
-static Chunk *current_chunk () {
-    return compiling_chunk;
-}
 
+static Chunk *current_chunk () { return compiling_chunk; }
+
+/* Handles error at TOKEN. */
 static void error_at (Token *token, const char *msg) {
+    /* If we are already panicking, we have already done this. */
     if (parser.panic_mode) return;
 
     parser.panic_mode = true;
     fprintf (stderr, "[line %d] Error", token->line);
 
-    if (token->type == TOKEN_EOF) {
+    if (token->type == TOKEN_EOF) 
         fprintf (stderr, " at end");
-    } else if (token->type == TOKEN_ERROR) {
-        //NOOP
-    } else {
+    else if (token->type == TOKEN_ERROR) {/* NOOP. */} 
+    else 
         fprintf (stderr, " at '%.*s'", token->len, token->start);
-    }
 
     fprintf (stderr, ": %s\n", msg);
     parser.had_error = true;
-
 }
 
+/* Handles error at previous token. */
 static void error (const char *msg) {
     error_at (&parser.prev, msg);
 }
 
+/* Handles error at current token. */
 static void error_at_current (const char *msg) {
     error_at (&parser.cur, msg);
 }
 
+/* Advances the parser one token. */
 static void advance () {
     parser.prev = parser.cur;
 
@@ -83,6 +84,7 @@ static void advance () {
     }
 }
 
+/* Consumes a token. */
 static void consume (Token_t type, const char *msg) {
     if (parser.cur.type == type) {
         advance ();
@@ -92,19 +94,24 @@ static void consume (Token_t type, const char *msg) {
     error_at_current (msg);
 }
 
+/* Writes BYTE to the current chunk. */
 static void emit_byte (uint8_t byte) {
     write_chunk (current_chunk (), byte, parser.prev.line);
 }
 
+/* Writes 2 bytes to the current chunk. */
 static void emit_bytes (uint8_t byte1, uint8_t byte2) {
     write_chunk (current_chunk (), byte1, parser.prev.line);
     write_chunk (current_chunk (), byte2, parser.prev.line);
 }
 
+/* Writes the return operation to the current chunk. */
 static void emit_return () {
     emit_byte (OP_RETURN);
 }
 
+/* Checks if we have room for this constant and 
+    if so, calls add_constant. */
 static uint8_t make_constant (Value val) {
     int constant = add_constant (current_chunk (), val);
     if (constant > UINT8_MAX) {
@@ -171,6 +178,11 @@ static void number () {
     emit_constant (NUMBER_VAL(val));
 }
 
+static void string () {
+    emit_constant (OBJ_VAL(copy_string (parser.prev.start + 1,
+                                        parser.prev.len - 2)));
+}
+
 static void unary () {
     Token_t op_type = parser.prev.type;
     parse_prec (PREC_UNARY);
@@ -203,7 +215,7 @@ ParseRule rules[] = {
     [TOKEN_LESS]          = {NULL,     binary, PREC_COMPARISON},
     [TOKEN_LESS_EQUAL]    = {NULL,     binary, PREC_COMPARISON},
     [TOKEN_IDENTIFIER]    = {NULL,     NULL,   PREC_NONE},
-    [TOKEN_STRING]        = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_STRING]        = {string,   NULL,   PREC_NONE},
     [TOKEN_NUMBER]        = {number,   NULL,   PREC_NONE},
     [TOKEN_AND]           = {NULL,     NULL,   PREC_NONE},
     [TOKEN_CLASS]         = {NULL,     NULL,   PREC_NONE},
