@@ -30,6 +30,7 @@ struct ObjString {
 
 ObjString *take_string (char *chars, int len);
 ObjString *copy_string (const char *chars, int len);
+void print_object (Value val);
 
 static inline bool is_obj_type (Value value, Obj_t type) {
     return IS_OBJ(value) && AS_OBJ(value)->type == type;

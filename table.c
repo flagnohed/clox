@@ -123,7 +123,7 @@ void table_add_all (Table *from, Table *to) {
 
 ObjString *table_find_string (Table *table, const char *chars,
                               int len, uint32_t hash) {
-    if (table->count == 0) return false;
+    if (table->count == 0) return NULL;
 
     uint32_t i = hash % table->capacity;
     for (;;) {
