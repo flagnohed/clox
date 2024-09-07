@@ -49,6 +49,8 @@ int disassemble_instruction (Chunk *c, int offset) {
             return constant_instruction ("OP_DEFINE_GLOBAL", c, offset);
         case OP_GET_GLOBAL:
             return constant_instruction ("OP_GET_GLOBAL", c, offset);
+        case OP_SET_GLOBAL:
+            return constant_instruction ("OP_SET_GLOBAL", c, offset);
         case OP_NEGATE:
             return simple_instruction ("OP_NEGATE", offset);
         case OP_EQUAL:
