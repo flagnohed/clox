@@ -10,5 +10,3 @@ clox: $(OBJS)
 objs/%.o: %.c
 	$(CC) -c -o $@ $^ $(CFLAGS)
 
-clean:
-	rm -f objs/*

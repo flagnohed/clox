@@ -2,6 +2,7 @@
 #define clox_vm_h
 
 #include "chunk.h"
+#include "table.h"
 #include "value.h"
 
 
@@ -13,6 +14,7 @@ typedef struct {
     uint8_t *ip;            /* Instruction pointer. */
     Value stack[STACK_MAX];
     Value *sp;              /* Points to the top of stack. */
+    Table strings;          /* Used for string interning. */
     Obj *objects;           /* Used in garbage collection. */
 }   VM;
 
