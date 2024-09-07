@@ -94,6 +94,16 @@ static void consume (Token_t type, const char *msg) {
     error_at_current (msg);
 }
 
+static bool check (Token_t type) {
+    return parser.cur.type == type;
+}
+
+static bool match (Token_t type) {
+    if (!check (type)) return false;
+    advance ();
+    return true;
+}
+
 /* Writes BYTE to the current chunk. */
 static void emit_byte (uint8_t byte) {
     write_chunk (current_chunk (), byte, parser.prev.line);
@@ -136,8 +146,11 @@ static void end_compiler () {
 }
 
 static void expression();
-static ParseRule* get_rule(Token_t type);
+static void statement();
+static void declaration();
+static uint8_t identifier_constant (Token *name);
 static void parse_prec(Precedence prec);
+static ParseRule* get_rule(Token_t type);
 
 static void binary () {
     Token_t op_type = parser.prev.type;
@@ -183,6 +196,15 @@ static void string () {
                                         parser.prev.len - 2)));
 }
 
+static void named_variable (Token *name) {
+    uint8_t arg = identifier_constant (name);
+    emit_bytes(OP_GET_GLOBAL, arg);
+} 
+
+static void variable () {
+    named_variable (&parser.prev);
+}
+
 static void unary () {
     Token_t op_type = parser.prev.type;
     parse_prec (PREC_UNARY);
@@ -214,7 +236,7 @@ ParseRule rules[] = {
     [TOKEN_GREATER_EQUAL] = {NULL,     binary, PREC_COMPARISON},
     [TOKEN_LESS]          = {NULL,     binary, PREC_COMPARISON},
     [TOKEN_LESS_EQUAL]    = {NULL,     binary, PREC_COMPARISON},
-    [TOKEN_IDENTIFIER]    = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_IDENTIFIER]    = {variable, NULL,   PREC_NONE},
     [TOKEN_STRING]        = {string,   NULL,   PREC_NONE},
     [TOKEN_NUMBER]        = {number,   NULL,   PREC_NONE},
     [TOKEN_AND]           = {NULL,     NULL,   PREC_NONE},
@@ -254,12 +276,97 @@ static void parse_prec (Precedence prec) {
     }
 }
 
+static uint8_t parse_variable (const char *error_msg) {
+    consume (TOKEN_IDENTIFIER, error_msg);
+    return identifier_constant (&parser.prev);
+}
+
+static void define_variable (uint8_t global) {
+    emit_bytes (OP_DEFINE_GLOBAL, global);
+}
+
+static uint8_t identifier_constant (Token *name) {
+    return make_constant (OBJ_VAL(copy_string (name->start, name->len)));
+}
+
 static ParseRule *get_rule (Token_t type) {
     return &rules[type];
 }
 
 static void expression () {
     parse_prec (PREC_ASSIGNMENT);
+}
+
+static void var_declaration () {
+    uint8_t global = parse_variable ("Expect variable name.");
+
+    if (match (TOKEN_EQUAL)) {
+        expression ();
+    } else {
+        /* E.g., 'var a;' sets a to nil. */
+        emit_byte (OP_NIL);
+    }
+
+    consume (TOKEN_SEMICOLON, 
+             "Expect ';' after variable declaration.");
+
+    define_variable (global);
+}
+
+static void expression_statement () {
+    expression ();
+    consume (TOKEN_SEMICOLON, "Expect ';' after expression.");
+    emit_byte (OP_POP);
+}
+
+static void print_statement () {
+    expression ();
+    consume (TOKEN_SEMICOLON, "Expect ';' after value.");
+    emit_byte (OP_PRINT);
+}
+
+/* Skip tokens until statement boundary is found (like a semicolon). 
+    Or, we can look for a beginning of a statement. */
+static void synchronize () {
+    parser.panic_mode = false;
+
+    while (parser.cur.type != TOKEN_EOF) {
+        if (parser.prev.type == TOKEN_SEMICOLON) return;
+        switch (parser.cur.type) {
+            case TOKEN_CLASS:
+            case TOKEN_FUN:
+            case TOKEN_VAR:
+            case TOKEN_FOR:
+            case TOKEN_IF:
+            case TOKEN_WHILE:
+            case TOKEN_PRINT:
+            case TOKEN_RETURN:
+                return;
+
+            default:
+                ;  /* Do nothing. */
+        }
+
+        advance ();
+    }
+}
+
+static void declaration () {
+    if (match (TOKEN_VAR)) {
+        var_declaration ();
+    } else {
+        statement ();
+    }
+
+    if (parser.panic_mode) synchronize ();
+}
+
+static void statement () {
+    if (match (TOKEN_PRINT)) {
+        print_statement ();
+    } else {
+        expression_statement ();
+    }
 }
 
 bool compile (const char* source, Chunk *c) {
@@ -270,7 +377,11 @@ bool compile (const char* source, Chunk *c) {
     parser.panic_mode = false;
 
     advance ();
-    expression ();
+    
+    while (!match (TOKEN_EOF)) {
+        declaration ();
+    }
+        
     consume (TOKEN_EOF, "Expect end of expression.");
     end_compiler ();
     return !parser.had_error;

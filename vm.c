@@ -29,13 +29,16 @@ static void runtime_error (const char *format, ...) {
     reset_stack();
 }
 
+/* Initiates the virtual machine. */
 void init_VM() {
     reset_stack ();
     vm.objects = NULL;
+    init_table (&vm.globals);
     init_table (&vm.strings);
 }
 
 void free_VM() {
+    free_table (&vm.globals);
     free_table (&vm.strings);
     free_objects ();
 }
@@ -74,9 +77,9 @@ static void concatenate () {
 }
 
 static InterpretRes run () {
-#define READ_BYTE() (*vm.ip++)
+#define READ_BYTE()     (*vm.ip++)
 #define READ_CONSTANT() (vm.c->constants.values[READ_BYTE()])
-
+#define READ_STRING()   AS_STRING(READ_CONSTANT())
 #define BINARY_OP(value_type, op)                         \
     do {                                                  \
         if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) { \
@@ -109,10 +112,28 @@ static InterpretRes run () {
             case OP_NIL: push(NIL_VAL); break;
             case OP_TRUE: push(BOOL_VAL(true)); break;
             case OP_FALSE: push(BOOL_VAL(false)); break;
+            case OP_POP: pop (); break;
             case OP_EQUAL: {
                 Value b = pop ();
                 Value a = pop ();
                 push (BOOL_VAL(values_equal (a, b)));
+                break;
+            }
+            case OP_DEFINE_GLOBAL: {
+                ObjString *name = READ_STRING();
+                table_set (&vm.globals, name, peek (0));
+                pop ();
+                break;
+            }
+            case OP_GET_GLOBAL: {
+                ObjString *name = READ_STRING();
+                Value val;
+                if (!table_get (&vm.globals, name, &val)) {
+                    runtime_error ("Undefined variable '%s'.", 
+                                   name->chars);
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                push (val);
                 break;
             }
             case OP_GREATER:  BINARY_OP(BOOL_VAL, >); break;
@@ -144,14 +165,17 @@ static InterpretRes run () {
             case OP_NOT:
                 push (BOOL_VAL(is_falsey (pop ())));
                 break;
-            case OP_RETURN:
+            case OP_PRINT: {
                 print_value (pop ());
                 printf ("\n");
-                return INTERPRET_OK;
+                break;
+            }
+            case OP_RETURN: return INTERPRET_OK;
         }
     }
 #undef READ_BYTE
 #undef READ_CONSTANT
+#undef READ_STRING
 #undef BINARY_OP
 }
 

@@ -14,6 +14,7 @@ typedef struct {
     uint8_t *ip;            /* Instruction pointer. */
     Value stack[STACK_MAX];
     Value *sp;              /* Points to the top of stack. */
+    Table globals;          /* Global variables. */
     Table strings;          /* Used for string interning. */
     Obj *objects;           /* Used in garbage collection. */
 }   VM;
