@@ -9,6 +9,8 @@ statement      → exprStmt
                | whileStmt
                | block ;
 
+block          → "{" declaration* "}" ;
+
 declaration    → classDecl
                | funDecl
                | varDecl
@@ -17,6 +19,10 @@ declaration    → classDecl
 ### Current
 statement      → exprStmt
                | printStmt ;
+               | block ;
+
+block          → "{" declaration* "}" ;
 
 declaration    → varDecl
                | statement ;
+

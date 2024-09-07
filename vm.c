@@ -146,6 +146,16 @@ static InterpretRes run () {
                 }
                 break;
             }
+            case OP_GET_LOCAL: {
+                uint8_t slot = READ_BYTE();
+                push (vm.stack[slot]);
+                break;
+            }
+            case OP_SET_LOCAL: {
+                uint8_t slot = READ_BYTE();
+                vm.stack[slot] = peek (0);
+                break;
+            }
             case OP_GREATER:  BINARY_OP(BOOL_VAL, >); break;
             case OP_LESS:     BINARY_OP(BOOL_VAL, <); break;
             case OP_NEGATE:
