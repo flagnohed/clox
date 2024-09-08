@@ -31,6 +31,16 @@ static int byte_instruction (const char *name, Chunk *c, int offset) {
     return offset + 2; 
 }
 
+static int jmp_instruction (const char *name, int sign, 
+                            Chunk *c, int offset) {
+    uint16_t jmp = (uint16_t) (c->code[offset + 1] << 8);
+    jmp |= c->code[offset + 2];
+    printf("%-16s %4d -> %d\n", name, offset,
+            offset + 3 + sign * jmp);
+    return offset + 3;
+
+}
+
 int disassemble_instruction (Chunk *c, int offset) {
     printf ("%04d ", offset);
     
@@ -81,6 +91,10 @@ int disassemble_instruction (Chunk *c, int offset) {
             return simple_instruction ("OP_NOT", offset);
         case OP_PRINT:
             return simple_instruction ("OP_PRINT", offset);
+        case OP_JMP:
+            return jmp_instruction ("OP_JMP", 1, c, offset);
+        case OP_JMP_IF_FALSE:
+            return jmp_instruction ("OP_JMP_IF_FALSE", 1, c, offset);
         case OP_RETURN:
             return simple_instruction ("OP_RETURN", offset);
         default:

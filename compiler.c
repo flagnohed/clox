@@ -129,6 +129,15 @@ static void emit_bytes (uint8_t byte1, uint8_t byte2) {
     write_chunk (current_chunk (), byte2, parser.prev.line);
 }
 
+static int emit_jmp (uint8_t instruction) {
+    /* Write placeholder operand for the jmp offset. */
+    emit_byte (instruction);
+    /* Use 2 bytes for the jump offset, since 16 bits allow
+        jumping up to 65535 bytes of code, which should be enough. */
+    emit_bytes (0xff, 0xff);
+    return current_chunk()->count - 2;
+}
+
 /* Writes the return operation to the current chunk. */
 static void emit_return () {
     emit_byte (OP_RETURN);
@@ -148,6 +157,18 @@ static uint8_t make_constant (Value val) {
 
 static void emit_constant (Value val) {
     emit_bytes (OP_CONSTANT, make_constant (val));
+}
+
+/* Replaces the operand at the given location with the 
+    calculated jmp offset. */
+static void patch_jmp (int offset) {
+    /* -2 to adjust for the bytecode for the jmp offset itself. */
+    int jmp = current_chunk ()->count - offset - 2;
+
+    if (jmp > UINT16_MAX) error ("Too much code to jump over.");
+
+    current_chunk ()->code[offset] = (jmp >> 8) & 0xff;
+    current_chunk ()->code[offset + 1] = jmp & 0xff;     
 }
 
 static void init_compiler (Compiler *compiler) {
@@ -375,7 +396,6 @@ static int resolve_local (Compiler *compiler, Token *name) {
             return i;
         }
     }
-
     return -1;
 }
 
@@ -404,7 +424,6 @@ static void declare_variable () {
             error ("Already a variable with this name in this scope.");
         }
     }
-
     add_local (*name);
 }
 
@@ -420,7 +439,6 @@ static void block () {
     while (!check (TOKEN_RIGHT_BRACE) && !check (TOKEN_EOF)) {
         declaration ();
     } 
-
     consume (TOKEN_RIGHT_BRACE, "Expect '}' after block.");
 }
 
@@ -444,6 +462,24 @@ static void expression_statement () {
     expression ();
     consume (TOKEN_SEMICOLON, "Expect ';' after expression.");
     emit_byte (OP_POP);
+}
+
+static void if_statement () {
+    int then_jmp, else_jmp;
+
+    consume (TOKEN_LEFT_PAREN, "Expect '(' after 'if'.");
+    expression ();
+    consume (TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
+    /* Use backpatching to know how far to jump. */
+    then_jmp = emit_jmp (OP_JMP_IF_FALSE);
+    emit_byte (OP_POP);
+    statement ();
+    else_jmp = emit_jmp (OP_JMP);
+
+    patch_jmp (then_jmp);
+
+    if (match (TOKEN_ELSE)) statement ();
+    patch_jmp (else_jmp);
 }
 
 static void print_statement () {
@@ -491,11 +527,17 @@ static void declaration () {
 static void statement () {
     if (match (TOKEN_PRINT)) {
         print_statement ();
-    } else if (match (TOKEN_LEFT_BRACE)) {
+    } 
+
+    else if (match (TOKEN_IF)) {
+        if_statement ();
+    }
+    
+    else if (match (TOKEN_LEFT_BRACE)) {
         begin_scope ();
         block ();
         end_scope ();
-    }
+    } 
     
     else {
         expression_statement ();
