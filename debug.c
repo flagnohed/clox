@@ -95,6 +95,8 @@ int disassemble_instruction (Chunk *c, int offset) {
             return jmp_instruction ("OP_JMP", 1, c, offset);
         case OP_JMP_IF_FALSE:
             return jmp_instruction ("OP_JMP_IF_FALSE", 1, c, offset);
+        case OP_LOOP:
+            return jmp_instruction ("OP_LOOP", -1, c, offset);
         case OP_RETURN:
             return simple_instruction ("OP_RETURN", offset);
         default:

@@ -129,6 +129,16 @@ static void emit_bytes (uint8_t byte1, uint8_t byte2) {
     write_chunk (current_chunk (), byte2, parser.prev.line);
 }
 
+static void emit_loop (int loop_start) {
+    emit_byte (OP_LOOP);
+
+    int offset = current_chunk()->count - loop_start + 2;
+    if (offset > UINT16_MAX) error ("Loop body too large.");
+
+    emit_byte ((offset >> 8) & 0xff);
+    emit_byte (offset & 0xff);
+}
+
 static int emit_jmp (uint8_t instruction) {
     /* Write placeholder operand for the jmp offset. */
     emit_byte (instruction);
@@ -250,6 +260,17 @@ static void number (bool can_assign) {
     emit_constant (NUMBER_VAL(val));
 }
 
+static void _or (bool can_assign) {
+    int else_jmp = emit_jmp (OP_JMP_IF_FALSE);
+    int end_jmp = emit_jmp (OP_JMP);
+
+    patch_jmp (else_jmp);
+    emit_byte (OP_POP);
+
+    parse_prec (PREC_OR);
+    patch_jmp (end_jmp);
+}
+
 static void string (bool can_assign) {
     emit_constant (OBJ_VAL(copy_string (parser.prev.start + 1,
                                         parser.prev.len - 2)));
@@ -310,7 +331,7 @@ ParseRule rules[] = {
     [TOKEN_IDENTIFIER]    = {variable, NULL,   PREC_NONE},
     [TOKEN_STRING]        = {string,   NULL,   PREC_NONE},
     [TOKEN_NUMBER]        = {number,   NULL,   PREC_NONE},
-    [TOKEN_AND]           = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_AND]           = {NULL,     _and,   PREC_AND},
     [TOKEN_CLASS]         = {NULL,     NULL,   PREC_NONE},
     [TOKEN_ELSE]          = {NULL,     NULL,   PREC_NONE},
     [TOKEN_FALSE]         = {literal,  NULL,   PREC_NONE},
@@ -318,7 +339,7 @@ ParseRule rules[] = {
     [TOKEN_FUN]           = {NULL,     NULL,   PREC_NONE},
     [TOKEN_IF]            = {NULL,     NULL,   PREC_NONE},
     [TOKEN_NIL]           = {literal,  NULL,   PREC_NONE},
-    [TOKEN_OR]            = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_OR]            = {NULL,     _or,   PREC_OR},
     [TOKEN_PRINT]         = {NULL,     NULL,   PREC_NONE},
     [TOKEN_RETURN]        = {NULL,     NULL,   PREC_NONE},
     [TOKEN_SUPER]         = {NULL,     NULL,   PREC_NONE},
@@ -371,6 +392,13 @@ static void define_variable (uint8_t global) {
         return;
     } 
     emit_bytes (OP_DEFINE_GLOBAL, global);
+}
+
+static void _and (bool can_assign) {
+    int end_jmp = emit_jmp (OP_JMP_IF_FALSE);
+    emit_byte (OP_POP);
+    parse_prec (PREC_AND);
+    patch_jmp (end_jmp);
 }
 
 static uint8_t identifier_constant (Token *name) {
@@ -482,10 +510,77 @@ static void if_statement () {
     patch_jmp (else_jmp);
 }
 
+static void for_statement () {
+    int loop_start, exit_jmp;
+    /* If a for-statement declares a variable, that variable
+        should be scoped to the loop body. */
+    begin_scope ();
+    consume(TOKEN_LEFT_PAREN, "Expect '(' after 'for'.");
+    if (match (TOKEN_SEMICOLON)) {
+        /* No initializer. */
+    } else if (match (TOKEN_VAR)) {
+        var_declaration ();
+    } else {
+        expression_statement ();
+    }
+    
+    loop_start = current_chunk ()->count;
+    /* Check condition expression. */
+    exit_jmp = -1;
+    if (!match (TOKEN_SEMICOLON)) {
+        expression ();
+        consume (TOKEN_SEMICOLON, "Expect ';' after loop condition.");
+        /* Jump out of the loop if the condition is false. */
+        exit_jmp = emit_jmp (OP_JMP_IF_FALSE);
+        /* Condition. */
+        emit_byte (OP_POP);
+    }
+
+    /* One pass compiler, increment clause comes before the body, but 
+        executes after. So we need to jump a little bit back and forth. */
+    if (!match (TOKEN_RIGHT_PAREN)) {
+        int body_jmp = emit_jmp (OP_JMP);
+        int inc_start = current_chunk ()->count;
+        expression ();
+        emit_byte (OP_POP);
+        consume (TOKEN_RIGHT_PAREN, "Expect ')' after for-clauses.");
+
+        emit_loop (loop_start);
+        loop_start = inc_start;
+        patch_jmp (body_jmp);
+    }
+
+    statement ();
+    emit_loop (loop_start);
+    /* After the loop body, we need to patch that jump. */
+    if (exit_jmp != -1) {
+        patch_jmp (exit_jmp);
+        emit_byte (OP_POP);
+    }
+
+    end_scope ();
+}
+
 static void print_statement () {
     expression ();
     consume (TOKEN_SEMICOLON, "Expect ';' after value.");
     emit_byte (OP_PRINT);
+}
+
+static void while_statement () {
+    /* Capture the location to jump back to. */
+    int loop_start = current_chunk ()->count;
+    consume (TOKEN_LEFT_PAREN, "Ecpect '(' after 'while'.");
+    expression ();
+    consume (TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
+
+    int exit_jmp = emit_jmp (OP_JMP_IF_FALSE);
+    emit_byte (OP_POP);
+    statement ();
+    emit_loop (loop_start);
+
+    patch_jmp (exit_jmp);
+    emit_jmp (OP_POP);
 }
 
 /* Skip tokens until statement boundary is found (like a semicolon). 
@@ -532,7 +627,15 @@ static void statement () {
     else if (match (TOKEN_IF)) {
         if_statement ();
     }
+
+    else if (match (TOKEN_FOR)) {
+        for_statement ();
+    }
     
+    else if (match (TOKEN_WHILE)) {
+        while_statement ();
+    }
+
     else if (match (TOKEN_LEFT_BRACE)) {
         begin_scope ();
         block ();
