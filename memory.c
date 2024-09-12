@@ -18,13 +18,18 @@ void *reallocate (void *pointer, size_t old_size, size_t new_size) {
 
 static void free_object (Obj *object) {
     switch (object->type) {
+        case OBJ_FUNCTION: {
+            ObjFunction *function = (ObjFunction*) object;
+            free_chunk (&function->c);
+            FREE(ObjFunction, object);
+            break;
+        }
         case OBJ_STRING: {
             ObjString *string = (ObjString *) object;
             FREE_ARRAY(char, string->chars, string->len + 1);
             FREE(ObjString, object);
             break;
         }
-
     }
 }
 

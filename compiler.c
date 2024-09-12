@@ -42,10 +42,20 @@ typedef struct {
 typedef struct {
     Token name;
     int depth;
-}   Local;
+}   Local;  
+
+/* Function types. */
+typedef enum {
+    TYPE_FUNCTION,
+    TYPE_SCRIPT,
+}   Function_t;
 
 typedef struct {
-    Local locals[UINT8_MAX + 1];
+    ObjFunction *function;
+    Function_t type;
+    Local locals[UINT8_MAX + 1];    /* Keeps track of which stack slots are 
+                                       associated with which local variables
+                                       or temporaries. */
     int local_count;
     int scope_depth;
 }   Compiler;
@@ -56,7 +66,11 @@ Compiler *current = NULL;
 Chunk *compiling_chunk;
 
 
-static Chunk *current_chunk () { return compiling_chunk; }
+/* Current chunk is always the chunk owned by 
+    the function we're in the middle of compiling. */
+static Chunk *current_chunk () { 
+    return &current->function->c; 
+}
 
 /* Handles error at TOKEN. */
 static void error_at (Token *token, const char *msg) {
@@ -108,6 +122,7 @@ static void consume (Token_t type, const char *msg) {
     error_at_current (msg);
 }
 
+/* Check if we are currently parsing a token with type TYPE. */
 static bool check (Token_t type) {
     return parser.cur.type == type;
 }
@@ -181,19 +196,34 @@ static void patch_jmp (int offset) {
     current_chunk ()->code[offset + 1] = jmp & 0xff;     
 }
 
-static void init_compiler (Compiler *compiler) {
+static void init_compiler (Compiler *compiler, Function_t type) {
+    /* NULL first because of garbage collection paranoia. */
+    compiler->function = NULL;
+    compiler->type = type;
     compiler->local_count = 0;
     compiler->scope_depth = 0;
+    compiler->function = new_function ();
     current = compiler;
+
+    Local *local = &current->locals[current->local_count++];
+    local->depth = 0;
+    local->name.start = "";
+    local->name.len = 0;
 }
 
-static void end_compiler () {
+static ObjFunction *end_compiler () {
     emit_return ();
+    ObjFunction *function = current->function;
+
 #ifdef DEBUG_PRINT_CODE
     if (!parser.had_error) {
-        disassemble_chunk (current_chunk (), "code");
+        /* If we are at "top-level" we are running a script, not a function. */
+        disassemble_chunk (current_chunk (), function->name != NULL ?
+                           function->name->chars : "<script>");
     }
 #endif
+
+    return function;
 }
 
 static void begin_scope () {
@@ -244,9 +274,9 @@ static void binary (bool can_assign) {
 static void literal (bool can_assign) {
     switch (parser.prev.type) {
         case TOKEN_FALSE: emit_byte (OP_FALSE); break;
-        case TOKEN_NIL: emit_byte (OP_NIL); break;
-        case TOKEN_TRUE: emit_byte (OP_TRUE); break;
-        default: return;
+        case TOKEN_NIL: emit_byte (OP_NIL);     break;
+        case TOKEN_TRUE: emit_byte (OP_TRUE);   break;
+        default:                                return;
     }
 }
 
@@ -379,6 +409,8 @@ static void parse_prec (Precedence prec) {
     }
 }
 
+/* Parses a variable and prints ERROR_MSG if consuming
+    current token fails. */
 static uint8_t parse_variable (const char *error_msg) {
     consume (TOKEN_IDENTIFIER, error_msg);
     
@@ -388,6 +420,7 @@ static uint8_t parse_variable (const char *error_msg) {
     return identifier_constant (&parser.prev);
 }
 
+/* Marks the latest local variable initialized. */
 static void mark_initialized () {
     current->locals[current->local_count - 1].depth = 
         current->scope_depth;
@@ -479,7 +512,6 @@ static void var_declaration () {
         /* E.g., 'var a;' sets a to nil. */
         emit_byte (OP_NIL);
     }
-
     consume (TOKEN_SEMICOLON, 
              "Expect ';' after variable declaration.");
 
@@ -523,7 +555,6 @@ static void for_statement () {
     } else {
         expression_statement ();
     }
-    
     loop_start = current_chunk ()->count;
     /* Check condition expression. */
     exit_jmp = -1;
@@ -557,7 +588,6 @@ static void for_statement () {
         patch_jmp (exit_jmp);
         emit_byte (OP_POP);
     }
-
     end_scope ();
 }
 
@@ -600,11 +630,9 @@ static void synchronize () {
             case TOKEN_PRINT:
             case TOKEN_RETURN:
                 return;
-
             default:
                 ;  /* Do nothing. */
         }
-
         advance ();
     }
 }
@@ -615,7 +643,6 @@ static void declaration () {
     } else {
         statement ();
     }
-
     if (parser.panic_mode) synchronize ();
 }
 
@@ -623,34 +650,31 @@ static void statement () {
     if (match (TOKEN_PRINT)) {
         print_statement ();
     } 
-
     else if (match (TOKEN_IF)) {
         if_statement ();
     }
-
     else if (match (TOKEN_FOR)) {
         for_statement ();
     }
-    
     else if (match (TOKEN_WHILE)) {
         while_statement ();
     }
-
     else if (match (TOKEN_LEFT_BRACE)) {
         begin_scope ();
         block ();
         end_scope ();
     } 
-    
     else {
         expression_statement ();
     }
 }
 
-bool compile (const char* source, Chunk *c) {
+/* Compiles the given source code. Returns the resulting 
+    function if no errors, else NULL. */
+ObjFunction *compile (const char* source, Chunk *c) {
     init_scanner (source);
     Compiler compiler;
-    init_compiler (&compiler);
+    init_compiler (&compiler, TYPE_SCRIPT);
 
     compiling_chunk = c;
     parser.had_error = false;
@@ -661,8 +685,6 @@ bool compile (const char* source, Chunk *c) {
     while (!match (TOKEN_EOF)) {
         declaration ();
     }
-        
-    consume (TOKEN_EOF, "Expect end of expression.");
-    end_compiler ();
-    return !parser.had_error;
+    ObjFunction *function = end_compiler ();
+    return parser.had_error ? NULL : function;
 }
