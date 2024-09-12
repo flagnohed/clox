@@ -260,6 +260,13 @@ static void number (bool can_assign) {
     emit_constant (NUMBER_VAL(val));
 }
 
+static void _and (bool can_assign) {
+    int end_jmp = emit_jmp (OP_JMP_IF_FALSE);
+    emit_byte (OP_POP);
+    parse_prec (PREC_AND);
+    patch_jmp (end_jmp);
+}
+
 static void _or (bool can_assign) {
     int else_jmp = emit_jmp (OP_JMP_IF_FALSE);
     int end_jmp = emit_jmp (OP_JMP);
@@ -392,13 +399,6 @@ static void define_variable (uint8_t global) {
         return;
     } 
     emit_bytes (OP_DEFINE_GLOBAL, global);
-}
-
-static void _and (bool can_assign) {
-    int end_jmp = emit_jmp (OP_JMP_IF_FALSE);
-    emit_byte (OP_POP);
-    parse_prec (PREC_AND);
-    patch_jmp (end_jmp);
 }
 
 static uint8_t identifier_constant (Token *name) {
