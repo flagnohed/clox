@@ -114,6 +114,13 @@ static bool call_value (Value callee, int arg_count) {
         switch (OBJ_TYPE(callee)) {
             case OBJ_FUNCTION:
                 return call (AS_FUNCTION(callee), arg_count);
+            case OBJ_NATIVE: {
+                NativeFn native = AS_NATIVE(callee);
+                Value result = native (arg_count, vm.sp - arg_count);
+                vm.sp -= arg_count + 1;
+                push (result);
+                return true;
+            }
             default:
                 break;  /* Non-callable object type. */
         }

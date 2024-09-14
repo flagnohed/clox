@@ -5,6 +5,7 @@
 #include "common.h"
 #include "scanner.h"
 
+/* ##################################################################################### */
 
 typedef struct {
     const char* start;
@@ -12,8 +13,11 @@ typedef struct {
     int line;
 }   Scanner;
 
+/* ##################################################################################### */
 
 Scanner scanner;
+
+/* ##################################################################################### */
 
 void init_scanner (const char *source) {
     scanner.start = source;
@@ -21,23 +25,33 @@ void init_scanner (const char *source) {
     scanner.line = 1;
 }
 
+/* ##################################################################################### */
+
 static bool is_at_end () {
     return *scanner.current == '\0';
 }
+
+/* ##################################################################################### */
 
 static char advance () {
     scanner.current++;
     return scanner.current[-1];
 }
 
+/* ##################################################################################### */
+
 static char peek () {
     return *scanner.current;
 }
+
+/* ##################################################################################### */
 
 static char peek_next () {
     if (is_at_end ()) return '\0';
     return scanner.current[1];
 }
+
+/* ##################################################################################### */
 
 static bool match (char expected) {
     if (is_at_end ()) return false;
@@ -45,6 +59,8 @@ static bool match (char expected) {
     scanner.current++;
     return true;
 }
+
+/* ##################################################################################### */
 
 static Token make_token (Token_t type) {
     Token token;
@@ -55,6 +71,8 @@ static Token make_token (Token_t type) {
     return token;
 }
 
+/* ##################################################################################### */
+
 static Token error_token (const char *msg) {
     Token token;
     token.type = TOKEN_ERROR;
@@ -63,6 +81,8 @@ static Token error_token (const char *msg) {
     token.line = scanner.line;
     return token;
 }
+
+/* ##################################################################################### */
 
 static void skip_whitespace () {
     for (;;) {
@@ -91,6 +111,8 @@ static void skip_whitespace () {
     }
 }
 
+/* ##################################################################################### */
+
 static Token_t check_keyword (int start, int len, 
                             const char *rest, Token_t type) {
     if (scanner.current - scanner.start == start + len &&
@@ -100,6 +122,8 @@ static Token_t check_keyword (int start, int len,
 
     return TOKEN_IDENTIFIER;
 }
+
+/* ##################################################################################### */
 
 static Token_t identifier_type () {
 
@@ -144,10 +168,14 @@ static Token_t identifier_type () {
     return TOKEN_IDENTIFIER;
 }
 
+/* ##################################################################################### */
+
 static Token identifier () {
     while (isalpha (peek ()) || isdigit (peek ())) advance ();
     return make_token (identifier_type ());
 }
+
+/* ##################################################################################### */
 
 static Token number () {
     while (isdigit (peek ())) advance ();
@@ -161,6 +189,8 @@ static Token number () {
     return make_token (TOKEN_NUMBER);
 }
 
+/* ##################################################################################### */
+
 static Token string () {
     while (peek () != '"' && !is_at_end ()) {
         if (peek () == '\n') scanner.line++;
@@ -172,6 +202,8 @@ static Token string () {
     advance ();
     return make_token (TOKEN_STRING);
 }
+
+/* ##################################################################################### */
 
 Token scan_token () {
     skip_whitespace ();

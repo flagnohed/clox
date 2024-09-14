@@ -7,11 +7,15 @@
 #include "debug.h"
 #include "vm.h"
 
+/* ##################################################################################### */
+
 #define EX_USAGE 64
 #define EX_COMPILE 65
 #define EX_RUNTIME 70
 #define EX_FILE 74  
 #define MAX_LINE_LEN 1024
+
+/* ##################################################################################### */
 
 static void repl () {
     char line[MAX_LINE_LEN];
@@ -26,6 +30,8 @@ static void repl () {
         interpret (line);
     }
 }
+
+/* ##################################################################################### */
 
 static char *read_file (const char *path) {
     FILE *f = fopen (path, "rb");
@@ -54,6 +60,8 @@ static char *read_file (const char *path) {
     return buf;
 }
 
+/* ##################################################################################### */
+
 static void run_file (const char *path) {
     char *source = read_file (path);
     InterpretRes res = interpret (source);
@@ -63,6 +71,7 @@ static void run_file (const char *path) {
     if (res == INTERPRET_RUNTIME_ERROR) exit (EX_RUNTIME);
 }
 
+/* ##################################################################################### */
 
 int main(int argc, const char *argv[]) {
     init_VM ();

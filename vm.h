@@ -6,9 +6,13 @@
 #include "table.h"
 #include "value.h"
 
+/* ##################################################################################### */
+
 #define UINT8_COUNT (UINT8_MAX + 1)
 #define FRAMES_MAX 64
 #define STACK_MAX (FRAMES_MAX * UINT8_COUNT)
+
+/* ##################################################################################### */
 
 /* A single outgoing function call. */
 typedef struct {
@@ -17,6 +21,8 @@ typedef struct {
     Value *slots;           /* Points at the first slot that this function
                                can use in the VM's value stack. */
 }   CallFrame;
+
+/* ##################################################################################### */
 
 typedef struct {
     CallFrame frames[FRAMES_MAX];
@@ -29,24 +35,32 @@ typedef struct {
     Obj *objects;           /* Used in garbage collection. */
 }   VM;
 
+/* ##################################################################################### */
+
 typedef enum {
     INTERPRET_OK,
     INTERPRET_COMPILE_ERROR,
     INTERPRET_RUNTIME_ERROR,
 }   InterpretRes;
 
+/* ##################################################################################### */
+
 extern VM vm;
+
+/* ##################################################################################### */
 
 /* VM stuff. */
 void init_VM();
 void free_VM();
 
+/* ##################################################################################### */
+
 InterpretRes interpret (const char *source);
+
+/* ##################################################################################### */
 
 /* Stack operations. */
 void push (Value val);
 Value pop ();
-
-
 
 #endif

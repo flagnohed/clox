@@ -10,6 +10,7 @@
     now somewhat arbitrary. */
 #define TABLE_MAX_LOAD 0.75
 
+/* ##################################################################################### */
 
 void init_table (Table *table) {
     table->count = 0;
@@ -17,10 +18,14 @@ void init_table (Table *table) {
     table->entries = NULL;
 }
 
+/* ##################################################################################### */
+
 void free_table (Table *table) {
     FREE_ARRAY(Entry, table->entries, table->capacity);
     init_table (table);
 }
+
+/* ##################################################################################### */
 
 static Entry *find_entry (Entry *entries, int capacity,
                           ObjString *key) {
@@ -44,6 +49,8 @@ static Entry *find_entry (Entry *entries, int capacity,
         i = (i + 1) % capacity;
     }
 }
+
+/* ##################################################################################### */
 
 static void adjust_capacity (Table *table, int capacity) {
     Entry *entries = ALLOCATE(Entry, capacity);
@@ -69,6 +76,8 @@ static void adjust_capacity (Table *table, int capacity) {
     table->capacity = capacity;
 }
 
+/* ##################################################################################### */
+
 /* Get the corresponding value of key if it exists and
     place it in val. */
 bool table_get (Table *table, ObjString *key, Value *val) {
@@ -80,6 +89,8 @@ bool table_get (Table *table, ObjString *key, Value *val) {
     *val = entry->val;
     return true;
 }
+
+/* ##################################################################################### */
 
 /* Adds the given key/val pair to the given hash table. */
 bool table_set (Table *table, ObjString *key, Value val) {
@@ -99,6 +110,8 @@ bool table_set (Table *table, ObjString *key, Value val) {
     return is_new_key;
 }
 
+/* ##################################################################################### */
+
 bool table_delete (Table *table, ObjString *key) {
     if (table->count == 0) return false;
 
@@ -112,6 +125,8 @@ bool table_delete (Table *table, ObjString *key) {
     return true;
 }
 
+/* ##################################################################################### */
+
 void table_add_all (Table *from, Table *to) {
     for (int i = 0; i < from->capacity; i++) {
         Entry *entry = &from->entries[i];
@@ -120,6 +135,8 @@ void table_add_all (Table *from, Table *to) {
         }
     }
 }
+
+/* ##################################################################################### */
 
 ObjString *table_find_string (Table *table, const char *chars,
                               int len, uint32_t hash) {

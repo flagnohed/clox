@@ -1,6 +1,7 @@
 #ifndef clox_scanner_h
 #define clox_scanner_h
 
+/* ##################################################################################### */
 
 typedef enum {
     TOKEN_LEFT_PAREN, TOKEN_RIGHT_PAREN,
@@ -23,6 +24,7 @@ typedef enum {
     TOKEN_ERROR, TOKEN_EOF    
 }   Token_t;
 
+/* ##################################################################################### */
 
 typedef struct {
     Token_t type;
@@ -31,6 +33,9 @@ typedef struct {
     int line;
 }   Token;
 
+/* ##################################################################################### */
+
 void init_scanner(const char* source);
 Token scan_token ();
+
 #endif

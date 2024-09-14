@@ -3,6 +3,8 @@
 #include "debug.h"
 #include "value.h"
 
+/* ##################################################################################### */
+
 void disassemble_chunk (Chunk *c, const char *name) {
     printf ("== %s ==\n", name);
 
@@ -10,6 +12,8 @@ void disassemble_chunk (Chunk *c, const char *name) {
         offset = disassemble_instruction (c, offset);
     }
 }
+
+/* ##################################################################################### */
 
 static int constant_instruction (const char *name, Chunk *c, 
                                 int offset) {
@@ -20,16 +24,22 @@ static int constant_instruction (const char *name, Chunk *c,
     return offset + 2;
 }
 
+/* ##################################################################################### */
+
 static int simple_instruction (const char *name, int offset) {
     printf ("%s\n", name);
     return offset + 1;
 }
+
+/* ##################################################################################### */
 
 static int byte_instruction (const char *name, Chunk *c, int offset) {
     uint8_t slot = c->code[offset + 1];
     printf("%-16s %4d\n", name, slot);
     return offset + 2; 
 }
+
+/* ##################################################################################### */
 
 static int jmp_instruction (const char *name, int sign, 
                             Chunk *c, int offset) {
@@ -40,6 +50,8 @@ static int jmp_instruction (const char *name, int sign,
     return offset + 3;
 
 }
+
+/* ##################################################################################### */
 
 int disassemble_instruction (Chunk *c, int offset) {
     printf ("%04d ", offset);

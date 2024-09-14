@@ -4,6 +4,7 @@
 #include "memory.h"
 #include "value.h"
 
+/* ##################################################################################### */
 
 void init_chunk (Chunk *c) {
     c->capacity = 0;
@@ -13,6 +14,8 @@ void init_chunk (Chunk *c) {
     init_value_array (&c->constants);
 }
 
+/* ##################################################################################### */
+
 void free_chunk (Chunk *c) {
     FREE_ARRAY(uint8_t, c->code, c->capacity);
     FREE_ARRAY(int, c->lines, c->capacity);
@@ -20,6 +23,8 @@ void free_chunk (Chunk *c) {
     /* "Init" the Chunk again to zero out the contents. */
     init_chunk (c);
 }
+
+/* ##################################################################################### */
 
 /* Writes BYTE into C and stores which line it corresponds to. */
 void write_chunk (Chunk *c, uint8_t byte, int line) {
@@ -36,6 +41,8 @@ void write_chunk (Chunk *c, uint8_t byte, int line) {
     c->lines[c->count] = line;
     c->count++;
 }
+
+/* ##################################################################################### */
 
 /* Adds a constant to the Chunk, as well as
     adding it to the constants array. */

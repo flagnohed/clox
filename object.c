@@ -7,8 +7,12 @@
 #include "value.h"
 #include "vm.h"
 
+/* ##################################################################################### */
+
 #define ALLOCATE_OBJ(type, obj_type) \
     (type *)allocate_object(sizeof(type), obj_type)
+
+/* ##################################################################################### */
 
 static Obj *allocate_object (size_t size, Obj_t type) {
     Obj *object = (Obj *)reallocate (NULL, 0, size);
@@ -20,6 +24,8 @@ static Obj *allocate_object (size_t size, Obj_t type) {
     return object;
 }
 
+/* ##################################################################################### */
+
 ObjFunction *new_function () {
     ObjFunction *function = ALLOCATE_OBJ (ObjFunction, OBJ_FUNCTION);
     function->arity = 0;
@@ -27,6 +33,16 @@ ObjFunction *new_function () {
     init_chunk (&function->c);
     return function;
 }
+
+/* ##################################################################################### */
+
+ObjNative *new_native (NativeFn function) {
+    ObjNative *native = ALLOCATE_OBJ(ObjNative, OBJ_NATIVE);
+    native->function = function;
+    return native;
+}
+
+/* ##################################################################################### */
 
 static ObjString *allocate_string (char *chars, int len, 
                                    uint32_t hash) {
@@ -37,6 +53,8 @@ static ObjString *allocate_string (char *chars, int len,
     table_set (&vm.strings, string, NIL_VAL);
     return string;
 }
+
+/* ##################################################################################### */
 
 /* Hash a given string with FNV-1a algorithm. */
 uint32_t hash_string (const char *key, int len) {
@@ -50,6 +68,8 @@ uint32_t hash_string (const char *key, int len) {
     return hash;
 }
 
+/* ##################################################################################### */
+
 ObjString *take_string (char *chars, int len) {
     uint32_t hash = hash_string (chars, len);
     ObjString *interned = table_find_string (&vm.strings, chars,
@@ -60,6 +80,8 @@ ObjString *take_string (char *chars, int len) {
     }
     return allocate_string (chars, len, hash);
 }
+
+/* ##################################################################################### */
 
 ObjString* copy_string(const char* chars, int len) {
     uint32_t hash = hash_string (chars, len);
@@ -72,6 +94,8 @@ ObjString* copy_string(const char* chars, int len) {
     return allocate_string(heap_chars, len, hash);
 }
 
+/* ##################################################################################### */
+
 static void print_function (ObjFunction *function) {
     if (function->name == NULL) {
         printf ("<script>");
@@ -80,10 +104,15 @@ static void print_function (ObjFunction *function) {
     printf ("<fn %s>", function->name->chars);
 }
 
+/* ##################################################################################### */
+
 void print_object (Value val) {
     switch (OBJ_TYPE(val)) {
         case OBJ_FUNCTION:
             print_function (AS_FUNCTION(val));
+            break;
+        case OBJ_NATIVE:
+            printf ("<native fn>");
             break;
         case OBJ_STRING:
             printf ("%s", AS_CSTRING(val));

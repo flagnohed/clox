@@ -5,11 +5,15 @@
 #include "memory.h"
 #include "value.h"
 
+/* ##################################################################################### */
+
 void init_value_array (ValueArray *arr) {
   arr->capacity = 0;
   arr->count = 0;
   arr->values = NULL;
 }
+
+/* ##################################################################################### */
 
 void write_value_array (ValueArray *arr, Value val) {
     if (arr->count == arr->capacity) {
@@ -23,10 +27,14 @@ void write_value_array (ValueArray *arr, Value val) {
     arr->count++;
 }
 
+/* ##################################################################################### */
+
 void free_value_array (ValueArray *arr) {
     FREE_ARRAY(Value, arr->values, arr->capacity);
     init_value_array (arr);
 }
+
+/* ##################################################################################### */
 
 void print_value (Value val) {
     switch (val.type) {
@@ -38,6 +46,8 @@ void print_value (Value val) {
         case VAL_OBJ:    print_object (val); break;
     }
 }
+
+/* ##################################################################################### */
 
 bool values_equal (Value a, Value b) {
     if (a.type != b.type) return false;

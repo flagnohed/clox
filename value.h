@@ -3,9 +3,12 @@
 
 #include "common.h"
 
+/* ##################################################################################### */
 
 typedef struct Obj Obj;
 typedef struct ObjString ObjString;
+
+/* ##################################################################################### */
 
 typedef enum {
     VAL_BOOL,
@@ -13,6 +16,8 @@ typedef enum {
     VAL_NUMBER,
     VAL_OBJ
 }   Value_t;
+
+/* ##################################################################################### */
 
 typedef struct {
     Value_t type;
@@ -22,6 +27,8 @@ typedef struct {
         Obj *obj;       /* Stored on the heap. */
     }   as;
 }   Value;
+
+/* ##################################################################################### */
 
 #define IS_BOOL(value)    ((value).type == VAL_BOOL)
 #define IS_NIL(value)     ((value).type == VAL_NIL)
@@ -37,6 +44,7 @@ typedef struct {
 #define NUMBER_VAL(value) ((Value){VAL_NUMBER, {.number = value}})
 #define OBJ_VAL(object)    ((Value){VAL_OBJ, {.obj = (Obj *)object}})
 
+/* ##################################################################################### */
 
 typedef struct {
     int capacity;
@@ -44,9 +52,9 @@ typedef struct {
     Value *values;
 }   ValueArray;
 
+/* ##################################################################################### */
+
 bool values_equal (Value a, Value b);
-
-
 void init_value_array (ValueArray *arr);
 void write_value_array (ValueArray *arr, Value val);
 void free_value_array (ValueArray *arr);
