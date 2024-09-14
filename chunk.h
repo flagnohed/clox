@@ -4,6 +4,7 @@
 #include "common.h"
 #include "value.h"
 
+/* ##################################################################################### */
 
 typedef enum {
     OP_CONSTANT,
@@ -29,8 +30,11 @@ typedef enum {
     OP_JMP,
     OP_JMP_IF_FALSE,
     OP_LOOP,
+    OP_CALL,
     OP_RETURN,
 }   OpCode;
+
+/* ##################################################################################### */
 
 typedef struct {
     int capacity;
@@ -40,6 +44,7 @@ typedef struct {
     ValueArray constants;
 }   Chunk;
 
+/* ##################################################################################### */
 
 void init_chunk (Chunk *c);
 void free_chunk (Chunk *c);
