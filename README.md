@@ -26,3 +26,5 @@ block          → "{" declaration* "}" ;
 declaration    → varDecl
                | statement ;
 
+Den tror att fib är n ??
+

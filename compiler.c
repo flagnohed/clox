@@ -455,7 +455,7 @@ static void unary (bool can_assign) {
 /* ##################################################################################### */
 
 ParseRule rules[] = {
-    [TOKEN_LEFT_PAREN]    = {grouping, NULL,   PREC_CALL},
+    [TOKEN_LEFT_PAREN]    = {grouping, call,   PREC_CALL},
     [TOKEN_RIGHT_PAREN]   = {NULL,     NULL,   PREC_NONE},
     [TOKEN_LEFT_BRACE]    = {NULL,     NULL,   PREC_NONE}, 
     [TOKEN_RIGHT_BRACE]   = {NULL,     NULL,   PREC_NONE},
@@ -538,6 +538,7 @@ static uint8_t parse_variable (const char *error_msg) {
 /* Marks the latest local variable initialized. */
 static void mark_initialized () {
     if (current->scope_depth == 0) return;
+    printf("marking as initialized. \n");
     current->locals[current->local_count - 1].depth = 
         current->scope_depth;
 }
@@ -841,7 +842,7 @@ static void declaration () {
     if (match (TOKEN_FUN)) {
         fun_declaration ();
     }
-    if (match (TOKEN_VAR)) {
+    else if (match (TOKEN_VAR)) {
         var_declaration ();
     } else {
         statement ();

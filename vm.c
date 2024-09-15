@@ -1,6 +1,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #include "common.h"
 #include "compiler.h"
@@ -13,6 +14,12 @@
 /* ##################################################################################### */
 
 VM vm; 
+
+/* ##################################################################################### */
+
+static Value clock_native (int arg_count, Value *args) {
+    return NUMBER_VAL((double) clock () / CLOCKS_PER_SEC);
+}
 
 /* ##################################################################################### */
 
@@ -43,8 +50,18 @@ static void runtime_error (const char *format, ...) {
             fprintf (stderr, "%s()\n", function->name->chars);
         }
     }
-
     reset_stack();
+}
+
+/* ##################################################################################### */
+
+/* Takes a pointer to a C function and the name it will be given in clox. */
+static void define_native (const char *name, NativeFn function) {
+    push (OBJ_VAL(copy_string (name, (int) strlen (name))));
+    push (OBJ_VAL(new_native (function)));
+    table_set (&vm.globals, AS_STRING(vm.stack[0]), vm.stack[1]);
+    pop (); 
+    pop ();
 }
 
 /* ##################################################################################### */
@@ -55,6 +72,8 @@ void init_VM() {
     vm.objects = NULL;
     init_table (&vm.globals);
     init_table (&vm.strings);
+
+    define_native ("clock", clock_native);
 }
 
 /* ##################################################################################### */
@@ -315,6 +334,7 @@ static InterpretRes run () {
                 vm.sp = frame->slots;
                 push (result);
                 frame = &vm.frames[vm.frame_count - 1];
+                break;
             }
         }
     }

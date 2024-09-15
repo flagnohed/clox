@@ -27,7 +27,7 @@ static Obj *allocate_object (size_t size, Obj_t type) {
 /* ##################################################################################### */
 
 ObjFunction *new_function () {
-    ObjFunction *function = ALLOCATE_OBJ (ObjFunction, OBJ_FUNCTION);
+    ObjFunction *function = ALLOCATE_OBJ(ObjFunction, OBJ_FUNCTION);
     function->arity = 0;
     function->name = NULL;
     init_chunk (&function->c);
