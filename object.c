@@ -83,7 +83,7 @@ static void print_function (ObjFunction *function) {
 void print_object (Value val) {
     switch (OBJ_TYPE(val)) {
         case OBJ_FUNCTION:
-            printf ("%s", AS_FUNCTION(val));
+            print_function (AS_FUNCTION(val));
             break;
         case OBJ_STRING:
             printf ("%s", AS_CSTRING(val));
