@@ -49,7 +49,8 @@ typedef enum {
     TYPE_SCRIPT,
 }   Function_t;
 
-typedef struct {
+typedef struct Compiler {
+    struct Compiler *enclosing;
     ObjFunction *function;
     Function_t type;
     Local locals[UINT8_MAX + 1];
@@ -189,6 +190,7 @@ static void patch_jmp (int offset) {
 }
 
 static void init_compiler (Compiler *compiler, Function_t type) {
+    compiler->enclosing = current;
     compiler->function = NULL;
     compiler->type = type;
     compiler->local_count = 0;
@@ -212,7 +214,7 @@ static ObjFunction *end_compiler () {
             ? function->name->chars : "<script>");
     }
 #endif
-
+    current = current->enclosing;
     return function;
 }
 
