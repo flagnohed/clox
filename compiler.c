@@ -238,6 +238,7 @@ static void end_scope () {
 }
 }
 
+static uint8_t argument_list ();
 static void expression();
 static void statement();
 static void declaration();
