@@ -197,6 +197,10 @@ static void init_compiler (Compiler *compiler, Function_t type) {
     compiler->scope_depth = 0;
     compiler->function = new_function ();
     current = compiler;
+    if (type != TYPE_SCRIPT) {
+        current->function->name = copy_string (parser.prev.start,
+                                               parser.prev.len);
+    }
 
     Local *local = &current->locals[current->local_count++];
     local->depth = 0;
@@ -499,6 +503,19 @@ static void function (Function_t type) {
     begin_scope ();
 
     consume (TOKEN_LEFT_PAREN, "Expect '(' after function name.");
+
+    /* Check if we have parameters. */
+    if (!check (TOKEN_RIGHT_PAREN)) {
+        do {
+            current->function->arity++;
+            if (current->function->arity > 255) {
+                error_at_current ("Cannot have more than 255 parameters.");
+            }
+            uint8_t constant = parse_variable ("Expect parameter name.");
+            define_variable (constant);
+        }   while (match (TOKEN_COMMA));
+    }
+
     consume (TOKEN_RIGHT_PAREN, "Expect ')' after parameters.");
     consume (TOKEN_LEFT_BRACE, "Expect '{' before function body.");
     block ();
