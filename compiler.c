@@ -44,7 +44,14 @@ typedef struct {
     int depth;
 }   Local;
 
+typedef enum {
+    TYPE_FUNCTION,
+    TYPE_SCRIPT,
+}   Function_t;
+
 typedef struct {
+    ObjFunction *function;
+    Function_t type;
     Local locals[UINT8_MAX + 1];
     int local_count;
     int scope_depth;
@@ -53,10 +60,10 @@ typedef struct {
 
 Parser parser;
 Compiler *current = NULL;
-Chunk *compiling_chunk;
+// Chunk *compiling_chunk;
 
 
-static Chunk *current_chunk () { return compiling_chunk; }
+static Chunk *current_chunk () { return &current->function->c; }
 
 /* Handles error at TOKEN. */
 static void error_at (Token *token, const char *msg) {
@@ -181,19 +188,32 @@ static void patch_jmp (int offset) {
     current_chunk ()->code[offset + 1] = jmp & 0xff;     
 }
 
-static void init_compiler (Compiler *compiler) {
+static void init_compiler (Compiler *compiler, Function_t type) {
+    compiler->function = NULL;
+    compiler->type = type;
     compiler->local_count = 0;
     compiler->scope_depth = 0;
+    compiler->function = new_function ();
     current = compiler;
+
+    Local *local = &current->locals[current->local_count++];
+    local->depth = 0;
+    local->name.start = "";
+    local->name.len = 0;
 }
 
-static void end_compiler () {
+static ObjFunction *end_compiler () {
     emit_return ();
+    ObjFunction *function = current->function;
+
 #ifdef DEBUG_PRINT_CODE
     if (!parser.had_error) {
-        disassemble_chunk (current_chunk (), "code");
+        disassemble_chunk(current_chunk(), function->name != NULL
+            ? function->name->chars : "<script>");
     }
 #endif
+
+    return function;
 }
 
 static void begin_scope () {
@@ -647,12 +667,11 @@ static void statement () {
     }
 }
 
-bool compile (const char* source, Chunk *c) {
+ObjFunction *compile (const char* source) {
     init_scanner (source);
     Compiler compiler;
-    init_compiler (&compiler);
+    init_compiler (&compiler, TYPE_SCRIPT);
 
-    compiling_chunk = c;
     parser.had_error = false;
     parser.panic_mode = false;
 
@@ -662,7 +681,6 @@ bool compile (const char* source, Chunk *c) {
         declaration ();
     }
         
-    consume (TOKEN_EOF, "Expect end of expression.");
-    end_compiler ();
-    return !parser.had_error;
+    ObjFunction *function = end_compiler ();
+    return parser.had_error ? NULL : function;
 }
